@@ -1,0 +1,13 @@
+{
+  "name": "demo-calls",
+  "version": "1.0.0",
+  "description": "Outbound screening-call demo using the EnableX Programmable Voice API. Dial an Indian number and run a job-profile-driven IVR questionnaire.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}
