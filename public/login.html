@@ -107,6 +107,20 @@
 
       if (u === USERNAME && p === PASSWORD) {
         sessionStorage.setItem('evueme_auth', 'ok');
+        // Record this direct login for cross-app reporting (fire-and-forget).
+        try {
+          let visitorId = localStorage.getItem('demo_visitor');
+          if (!visitorId) {
+            visitorId = (crypto.randomUUID && crypto.randomUUID()) ||
+              `v_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+            localStorage.setItem('demo_visitor', visitorId);
+          }
+          fetch('/api/log-login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: u, visitorId })
+          }).catch(() => {});
+        } catch (e) { /* logging must never block login */ }
         window.location.replace('index.html');
       } else {
         err.textContent = '⚠  Invalid username or password.';

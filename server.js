@@ -7,6 +7,8 @@ const enablex    = require('./lib/enablex');
 const conv       = require('./lib/conversation');
 // Additive: demo-portal SSO side-door (does not affect native client-side login)
 const { ssoHandler } = require('./sso/portalSso');
+// Additive: direct-login logging to the shared demo-portal Atlas collection
+const { logLogin } = require('./loginLog');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -16,6 +18,13 @@ app.use(express.urlencoded({ extended: true }));
 
 // Additive: auto-login entry for visitors arriving from the demo portal.
 app.get('/sso', ssoHandler);
+
+// Additive: record a direct login on this app's login page (fire-and-forget).
+app.post('/api/log-login', async (req, res) => {
+  const { username, visitorId } = req.body || {};
+  await logLogin({ username, visitorId, source: 'direct', req });
+  res.json({ ok: true });
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 
