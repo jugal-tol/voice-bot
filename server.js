@@ -5,12 +5,18 @@ const path       = require('path');
 const express    = require('express');
 const enablex    = require('./lib/enablex');
 const conv       = require('./lib/conversation');
+// Additive: demo-portal SSO side-door (does not affect native client-side login)
+const { ssoHandler } = require('./sso/portalSso');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Additive: auto-login entry for visitors arriving from the demo portal.
+app.get('/sso', ssoHandler);
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // In-memory session store, keyed by EnableX voice_id.
