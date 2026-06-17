@@ -26,6 +26,12 @@ app.post('/api/log-login', async (req, res) => {
   res.json({ ok: true });
 });
 
+// Additive: expose the demo portal URL (if configured) so the client logout can
+// route through the portal to end the portal session too.
+app.get('/api/config', (req, res) => {
+  res.json({ portalUrl: process.env.PORTAL_URL || '' });
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // In-memory session store, keyed by EnableX voice_id.
