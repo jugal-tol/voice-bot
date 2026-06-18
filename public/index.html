@@ -11,6 +11,12 @@
       window.location.replace('login.html');
     }
   </script>
+  <script>
+    // Theme (ADDITIVE): light by default, dark toggle in the navbar; persisted in localStorage.
+    (function(){try{document.documentElement.setAttribute('data-theme',localStorage.getItem('demo_theme')==='dark'?'dark':'light');}catch(e){}})();
+    function toggleTheme(){var d=document.documentElement.getAttribute('data-theme')==='dark';var n=d?'light':'dark';document.documentElement.setAttribute('data-theme',n);try{localStorage.setItem('demo_theme',n);}catch(e){}var b=document.getElementById('themeBtn');if(b)b.textContent=n==='dark'?'☀️':'🌙';}
+    document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('themeBtn');if(b)b.textContent=document.documentElement.getAttribute('data-theme')==='dark'?'☀️':'🌙';});
+  </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -228,6 +234,34 @@
       .answers-panel { padding: 12px 16px; }
       .brand-name { font-size: 20px; }
     }
+
+    /* ── Theme toggle button (in navbar) ── */
+    .theme-btn {
+      background: transparent; color: #ffffff; border: 1px solid rgba(255,255,255,.6);
+      border-radius: 8px; padding: 5px 10px; font-size: 14px; line-height: 1;
+      cursor: pointer; font-family: inherit; transition: background .15s;
+    }
+    .theme-btn:hover { background: rgba(255,255,255,.15); }
+
+    /* ── Dark theme (ADDITIVE) — only when html[data-theme="dark"] ──────────
+       Light mode is completely unaffected. */
+    html[data-theme="dark"] body { background: #0f172a; color: #e2e8f0; }
+    html[data-theme="dark"] .card,
+    html[data-theme="dark"] .log-card { background: #1e293b; border-color: #334155; box-shadow: none; }
+    html[data-theme="dark"] input[type="text"],
+    html[data-theme="dark"] input[type="tel"],
+    html[data-theme="dark"] textarea { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+    html[data-theme="dark"] .prefix { background: #0f172a; border-color: #334155; color: #cbd5e1; }
+    html[data-theme="dark"] .field > label { color: #cbd5e1; }
+    html[data-theme="dark"] .brand-sub,
+    html[data-theme="dark"] .log-meta { color: #94a3b8; }
+    html[data-theme="dark"] .log-title,
+    html[data-theme="dark"] .a-value { color: #e2e8f0; }
+    html[data-theme="dark"] .log-header,
+    html[data-theme="dark"] .answers-panel { border-color: #334155; }
+    html[data-theme="dark"] .answer-row { border-color: #1f2a3a; }
+    html[data-theme="dark"] .msg.bot .bubble { background: #334155; color: #e2e8f0; }
+    html[data-theme="dark"] .reset-btn { background: #0f172a; border-color: #334155; }
   </style>
 </head>
 <body>
@@ -237,6 +271,7 @@
   <div class="navbar-left">EvueMe Voice Bot</div>
   <div class="navbar-right">
     <span class="navbar-welcome">Welcome, Admin!</span>
+    <button id="themeBtn" class="theme-btn" onclick="toggleTheme()" title="Toggle dark mode">🌙</button>
     <button id="btnLogout" class="logout-btn">Logout</button>
   </div>
 </nav>
@@ -329,8 +364,28 @@
   let seenLogs  = 0;
 
   // ── Logout ─────────────────────────────────────────────────────────────
-  $('btnLogout').addEventListener('click', () => {
-    sessionStorage.removeItem('evueme_auth');
+  // Clears this app's session. If a demo portal is configured, route through the
+  // portal logout so the portal session ends too: SSO entrants land on the portal
+  // login, direct entrants on this app's own login.
+  $('btnLogout').addEventListener('click', async () => {
+    let entry = null;
+    try { entry = sessionStorage.getItem('evueme_entry'); } catch (e) {}
+    try { sessionStorage.removeItem('evueme_auth'); sessionStorage.removeItem('evueme_entry'); } catch (e) {}
+    let portal = '';
+    try {
+      const r = await fetch('/api/config');
+      const j = await r.json();
+      portal = (j.portalUrl || '').replace(/\/$/, '');
+    } catch (e) {}
+    if (portal) {
+      if (entry === 'sso') {
+        window.location.href = `${portal}/api/sso/logout`;
+      } else {
+        const ownLogin = `${window.location.origin}/login.html`;
+        window.location.href = `${portal}/api/sso/logout?next=${encodeURIComponent(ownLogin)}`;
+      }
+      return;
+    }
     window.location.replace('login.html');
   });
 

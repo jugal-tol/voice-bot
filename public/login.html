@@ -107,6 +107,7 @@
 
       if (u === USERNAME && p === PASSWORD) {
         sessionStorage.setItem('evueme_auth', 'ok');
+        sessionStorage.setItem('evueme_entry', 'direct'); // logged in directly on this app
         // Record this direct login for cross-app reporting (fire-and-forget).
         try {
           let visitorId = localStorage.getItem('demo_visitor');

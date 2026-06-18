@@ -90,7 +90,7 @@ function ssoHandler(req, res) {
     '<!doctype html><html><head><meta charset="utf-8"><title>Signing in…</title></head>' +
       '<body><script>try{sessionStorage.setItem(' +
       JSON.stringify(AUTH_KEY) +
-      ",'ok');}catch(e){}location.replace('/');</script>Signing you in…</body></html>"
+      ",'ok');sessionStorage.setItem('evueme_entry','sso');}catch(e){}location.replace('/');</script>Signing you in…</body></html>"
   );
 }
 
