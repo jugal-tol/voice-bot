@@ -23,6 +23,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { logLogin } = require('../loginLog');
 
 const ISSUER = 'demo-portal';
 const TARGET_ID = process.env.SSO_TARGET_ID || 'evueme';
@@ -83,6 +84,9 @@ function ssoHandler(req, res) {
     console.warn('[portal-sso] token already used');
     return res.redirect('/login.html?sso=expired');
   }
+
+  // Record this portal-launched (SSO) login (fire-and-forget).
+  logLogin({ username: claims.user, source: 'evueme-portal-login', req }).catch(() => {});
 
   // Set the SAME client-side flag the native login sets, then enter the app.
   res.set('Content-Type', 'text/html');
