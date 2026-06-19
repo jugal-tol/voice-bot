@@ -35,6 +35,7 @@ function ensure() {
         device: { browser: String, os: String, deviceType: String },
         visitorId: String,
         at: { type: Date, default: Date.now },
+        atIST: String,
       },
       { collection: 'login_events' }
     )
@@ -66,6 +67,14 @@ function deviceFrom(ua) {
   return { browser, os, deviceType };
 }
 
+// Human-readable IST timestamp: "DD/MM/YYYY, HH:mm:ss" (Asia/Kolkata).
+function istStamp(d) {
+  return (d || new Date()).toLocaleString('en-GB', {
+    timeZone: 'Asia/Kolkata', day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  });
+}
+
 async function logLogin({ username, visitorId, source = 'direct', req }) {
   if (!ensure()) return;
   try {
@@ -79,6 +88,7 @@ async function logLogin({ username, visitorId, source = 'direct', req }) {
       userAgent: ua,
       device: deviceFrom(ua),
       visitorId: visitorId || null,
+      atIST: istStamp(),
     });
   } catch (e) {
     console.error('[login-log] failed:', e.message);
