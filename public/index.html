@@ -368,9 +368,17 @@
   // portal logout so the portal session ends too: SSO entrants land on the portal
   // login, direct entrants on this app's own login.
   $('btnLogout').addEventListener('click', async () => {
-    let entry = null;
-    try { entry = sessionStorage.getItem('evueme_entry'); } catch (e) {}
-    try { sessionStorage.removeItem('evueme_auth'); sessionStorage.removeItem('evueme_entry'); } catch (e) {}
+    let entry = null, user = null, visitorId = null;
+    try { entry = sessionStorage.getItem('evueme_entry'); user = sessionStorage.getItem('evueme_user'); } catch (e) {}
+    try { visitorId = localStorage.getItem('demo_visitor'); } catch (e) {}
+    // Record this logout (best-effort; await so it sends before navigating).
+    try {
+      await fetch('/api/log-login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: user, visitorId, source: 'evueme-logout' })
+      });
+    } catch (e) {}
+    try { sessionStorage.removeItem('evueme_auth'); sessionStorage.removeItem('evueme_entry'); sessionStorage.removeItem('evueme_user'); } catch (e) {}
     let portal = '';
     try {
       const r = await fetch('/api/config');
