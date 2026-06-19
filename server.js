@@ -21,8 +21,8 @@ app.get('/sso', ssoHandler);
 
 // Additive: record a direct login on this app's login page (fire-and-forget).
 app.post('/api/log-login', async (req, res) => {
-  const { username, visitorId } = req.body || {};
-  await logLogin({ username, visitorId, source: 'direct', req });
+  const { username, visitorId, source } = req.body || {};
+  await logLogin({ username, visitorId, source: source || 'direct', req });
   res.json({ ok: true });
 });
 
