@@ -34,8 +34,8 @@ function ensure() {
         userAgent: String,
         device: { browser: String, os: String, deviceType: String },
         visitorId: String,
-        at: { type: Date, default: Date.now },
-        atIST: String,
+        dateandtime: { type: Date, default: Date.now },
+        IST: String,
       },
       { collection: 'login_events' }
     )
@@ -88,7 +88,7 @@ async function logLogin({ username, visitorId, source = 'direct', req }) {
       userAgent: ua,
       device: deviceFrom(ua),
       visitorId: visitorId || null,
-      atIST: istStamp(),
+      IST: istStamp(),
     });
   } catch (e) {
     console.error('[login-log] failed:', e.message);
