@@ -96,8 +96,15 @@
   </div>
 
   <script>
-    const USERNAME = 'vectraadmin';
-    const PASSWORD = 'vectra!!123';
+    // Accepted login pairs (existing vectraadmin + additional demo accounts).
+    const CREDENTIALS = [
+      { username: 'vectraadmin', password: 'vectra!!123' },
+      { username: 'vectraadmin', password: 'Vectra@Admin123' },
+      { username: 'vectramanager', password: 'Vectra@Manager456' },
+      { username: 'vectraagent', password: 'Vectra@Agent789' },
+      { username: 'vectraanalyst', password: 'Vectra@Analyst321' },
+      { username: 'vectrademo', password: 'Vectra@Demo654' },
+    ];
 
     document.getElementById('loginForm').addEventListener('submit', (e) => {
       e.preventDefault();
@@ -105,7 +112,7 @@
       const p = document.getElementById('password').value;
       const err = document.getElementById('error');
 
-      if (u === USERNAME && p === PASSWORD) {
+      if (CREDENTIALS.some((c) => u === c.username && p === c.password)) {
         sessionStorage.setItem('evueme_auth', 'ok');
         sessionStorage.setItem('evueme_entry', 'direct'); // logged in directly on this app
         sessionStorage.setItem('evueme_user', u); // remember for the logout event
