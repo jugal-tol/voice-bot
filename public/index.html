@@ -22,39 +22,195 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #f4f7fc;
+      background: #ffffff;
       color: #1e293b;
       height: 100vh;
       overflow: hidden;        /* the scroll happens inside .scroll-area, below the navbar */
     }
 
-    /* Scrollable content area that starts right below the fixed navbar, so the
-       cards are clipped at the navbar's bottom edge and never slide under it. */
+    /* Full-height page area to the right of the sidebar, with a soft professional
+       backdrop so content reads as a page — not cards floating on emptiness. */
     .scroll-area {
-      position: fixed; top: 56px; left: 0; right: 0; bottom: 0;
+      position: fixed; top: 56px; left: 210px; right: 0; bottom: 0;
       overflow-y: auto;
-      display: flex; flex-wrap: wrap; gap: 24px;
-      justify-content: center; align-items: flex-start;
-      padding: 36px 16px 44px;
+      padding: 30px 34px 52px;
+      background: #ffffff;
+    }
+
+    /* ── Views: each is a full-width page ── */
+    .view { display: none; }
+    .view.active {
+      display: flex; flex-wrap: wrap; gap: 22px;
+      justify-content: flex-start; align-items: flex-start; align-content: flex-start;
+      max-width: 1160px;
+      animation: viewIn .30s cubic-bezier(.2,.7,.3,1) both;
+    }
+
+    /* ── Page header (spans the full page row) ── */
+    .page-header {
+      width: 100%; display: flex; align-items: center; justify-content: space-between;
+      gap: 20px; padding-bottom: 6px; margin-bottom: 2px;
+    }
+    .page-title { font-size: 24px; font-weight: 800; color: #0f2350; letter-spacing: -.02em; }
+    .page-sub   { font-size: 13.5px; color: #5b6b85; margin-top: 5px; max-width: 620px; line-height: 1.5; }
+    .ph-illo { flex-shrink: 0; }
+    .ph-illo svg { height: 122px; width: auto; display: block; }
+    @media (max-width: 820px) { .ph-illo { display: none; } }
+
+    /* ── Motion ── */
+    @keyframes viewIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+    @keyframes popIn  { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
+    /* Detail panels animate in each time their content is (re)rendered */
+    #callDetail > *, #summaryDetail > *, #answersDetail > *, #fitDetail > *,
+    #answersBox > *, #fitBox > *, #analyticsBox > * {
+      animation: popIn .26s cubic-bezier(.2,.7,.3,1) both;
+    }
+
+    /* Slightly richer cards for the new page look */
+    .view .card, .view .log-card { border-radius: 18px; box-shadow: 0 10px 30px rgba(220, 38, 38,.07); }
+
+    /* ── Illustrated empty state (only .big variants get the artwork) ── */
+    .detail-empty {
+      color: #94a3b8; font-size: 13px; text-align: center; padding: 30px 16px;
+    }
+    .detail-empty.big {
+      display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 44px 16px;
+    }
+    .detail-empty.big::before {
+      content: ""; width: 150px; height: 108px; opacity: .95;
+      background: center/contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='108' viewBox='0 0 150 108'%3E%3Cellipse cx='75' cy='96' rx='52' ry='7' fill='%23fde2e2'/%3E%3Crect x='40' y='18' width='50' height='64' rx='6' fill='%23fff' stroke='%23fbcaca' stroke-width='2'/%3E%3Crect x='50' y='30' width='30' height='5' rx='2.5' fill='%23fca5a5'/%3E%3Crect x='50' y='42' width='30' height='5' rx='2.5' fill='%23fca5a5'/%3E%3Crect x='50' y='54' width='19' height='5' rx='2.5' fill='%23fca5a5'/%3E%3Ccircle cx='98' cy='66' r='19' fill='%23fef2f2' stroke='%23dc2626' stroke-width='4'/%3E%3Cline x1='112' y1='80' x2='126' y2='94' stroke='%23dc2626' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E");
+    }
+
+    /* ── Left sidebar ── */
+    .sidebar {
+      position: fixed; top: 56px; left: 0; bottom: 0; width: 210px; z-index: 900;
+      background: #ffffff; border-right: 1px solid #e3eaf3;
+      padding: 10px 0; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 0;
+    }
+    .sidebar-heading {
+      font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em;
+      color: #475569; padding: 16px 18px 6px;
+    }
+    /* Connected full-width tabs — no gaps, shared borders (dividers) between them */
+    .sidebar-item {
+      display: flex; align-items: center; gap: 11px;
+      padding: 13px 18px; cursor: pointer;
+      font-size: 13.5px; font-weight: 700; color: #1e293b;
+      background: #ffffff; width: 100%; text-align: left; font-family: inherit;
+      border: none; border-top: 1px solid #eef2f7;
+      border-left: 3px solid transparent;      /* accent slot for the active tab */
+      transition: background .14s, border-color .14s;
+    }
+    .sidebar-item:last-child { border-bottom: 1px solid #eef2f7; }
+    .sidebar-item:hover { background: #fff5f5; }
+    .sidebar-item.active { background: #fef2f2; color: #b91c1c; border-left-color: #dc2626; }
+    /* Uniform icon badge — every icon looks alike (same size, same blue) */
+    .sidebar-item .ico {
+      width: 28px; height: 28px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: #fbeaea; border-radius: 8px;
+    }
+    .sidebar-item .ico svg {
+      width: 15px; height: 15px; fill: none;
+      stroke: #dc2626; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+    .sidebar-item.active .ico { background: #fde2e2; }
+    .sidebar-item.soon { color: #64748b; }
+    .sidebar-item.soon .ico { background: #eef2f7; }
+    .sidebar-item.soon .ico svg { stroke: #94a3b8; }
+    .sidebar-item .soon-tag {
+      margin-left: auto; font-size: 9px; font-weight: 800; letter-spacing: .05em;
+      background: #eef2f7; color: #94a3b8; padding: 2px 7px; border-radius: 10px;
+    }
+
+    /* ── Call History ── */
+    .calls-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+    .call-row {
+      border: 1px solid #e3eaf3; border-radius: 10px; padding: 10px 12px; cursor: pointer;
+      transition: border-color .12s, background .12s;
+    }
+    .call-row:hover { border-color: #fca5a5; background: #fff5f5; }
+    .call-row.active { border-color: #dc2626; background: #fef2f2; }
+    .call-row .cr-name { font-size: 13px; font-weight: 700; color: #1e293b; }
+    .call-row .cr-meta { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+    .detail-empty { color: #94a3b8; font-size: 13px; text-align: center; padding: 40px 10px; }
+    .rec-link {
+      display: inline-flex; align-items: center; gap: 6px; margin-top: 10px;
+      font-size: 12px; font-weight: 700; color: #dc2626; text-decoration: none;
+      border: 1px solid #cbd5e1; border-radius: 8px; padding: 7px 12px;
+    }
+    .rec-link:hover { background: #fef2f2; border-color: #dc2626; }
+
+    /* ── Analysis: buttons, fit bars, stat cards ── */
+    .btn-primary {
+      background: #dc2626; color: #fff; border: none; border-radius: 10px;
+      padding: 10px 16px; font-weight: 700; cursor: pointer; font-family: inherit; font-size: 13px;
+    }
+    .btn-primary:hover:not(:disabled) { background: #b91c1c; }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+    /* "Cooking" processing indicator shown while the AI is working */
+    .cooking {
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+      text-align: center; padding: 36px 12px; color: #dc2626;
+      transition: opacity .22s ease; letter-spacing: .01em;
+    }
+    .cooking .ck-icon {
+      font-size: 46px; line-height: 1;
+      animation: cook-bob 1.4s ease-in-out infinite;
+    }
+    .cooking .ck-text { font-size: 15px; font-weight: 700; }
+    @keyframes cook-bob {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50%      { transform: translateY(-6px) scale(1.08); }
+    }
+    html[data-theme="dark"] .cooking { color: #fca5a5; }
+    .fit-score-big { font-size: 44px; font-weight: 800; color: #dc2626; line-height: 1; }
+    .fit-band { font-size: 13px; font-weight: 700; margin-top: 4px; }
+    .fitrow { margin: 12px 0; }
+    .fitrow .top { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 4px; }
+    .fitrow .top .lab { font-weight: 700; color: #334155; }
+    .fitrow .top .det { color: #94a3b8; }
+    .fitrow .top .pts { font-weight: 700; color: #0f172a; }
+    .track { height: 8px; background: #eef2f7; border-radius: 6px; overflow: hidden; }
+    .track > span { display: block; height: 100%; background: #dc2626; border-radius: 6px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-top: 14px; }
+    .stat { border: 1px solid #e3eaf3; border-radius: 12px; padding: 14px; background: #fff5f5; }
+    .stat .n { font-size: 24px; font-weight: 800; color: #0f172a; }
+    .stat .l { font-size: 10.5px; color: #64748b; margin-top: 3px; text-transform: uppercase; letter-spacing: .05em; }
+    .ind-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 12.5px; }
+    .ind-row .name { width: 130px; flex-shrink: 0; color: #334155; }
+    .ind-row .track { flex: 1; }
+    .ind-row .cnt { width: 26px; text-align: right; font-weight: 700; color: #64748b; }
+    html[data-theme="dark"] .stat { background: #3a1e1e; border-color: #334155; }
+    html[data-theme="dark"] .stat .n { color: #e2e8f0; }
+    html[data-theme="dark"] .fitrow .top .pts { color: #e2e8f0; }
+    html[data-theme="dark"] .track { background: #24344d; }
+
+    @media (max-width: 640px) {
+      .sidebar { width: 56px; padding: 12px 6px; }
+      .sidebar .label, .sidebar-heading, .sidebar-item .soon-tag { display: none; }
+      .sidebar-item { justify-content: center; padding: 12px 8px; }
+      .scroll-area { left: 56px; }
     }
 
     /* ── Top navigation bar ── */
     .navbar {
       position: fixed; top: 0; left: 0; right: 0; height: 56px; z-index: 1000;
-      background: #2563eb;            /* fully opaque — content scrolls cleanly behind it */
+      background: #dc2626;            /* fully opaque — content scrolls cleanly behind it */
       display: flex; align-items: center; justify-content: space-between;
       padding: 0 24px;
       box-shadow: 0 4px 12px rgba(15, 23, 42, .18);
     }
     .navbar-left  { color: #ffffff; font-size: 18px; font-weight: 800; letter-spacing: -.01em; }
     .navbar-right { display: flex; align-items: center; gap: 14px; }
-    .navbar-welcome { color: #e0ecff; font-size: 14px; font-weight: 600; }
+    .navbar-welcome { color: #fdeaea; font-size: 14px; font-weight: 600; }
     .logout-btn {
-      background: #ffffff; color: #2563eb; border: 1px solid #ffffff;
+      background: #ffffff; color: #dc2626; border: 1px solid #ffffff;
       border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700;
       cursor: pointer; font-family: inherit; transition: background .15s, color .15s;
     }
-    .logout-btn:hover { background: #e0ecff; }
+    .logout-btn:hover { background: #fdeaea; }
 
     /* ── Columns ── */
     .col-form { width: 100%; max-width: 420px; }
@@ -67,12 +223,12 @@
       border: 1px solid #e3eaf3;
       border-radius: 16px;
       padding: 30px 28px;
-      box-shadow: 0 6px 24px rgba(37, 99, 235, .06);
+      box-shadow: 0 6px 24px rgba(220, 38, 38, .06);
     }
 
     /* ── Brand ── */
     .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-    .brand-name { font-size: 22px; font-weight: 800; color: #2563eb; letter-spacing: -.02em; }
+    .brand-name { font-size: 22px; font-weight: 800; color: #dc2626; letter-spacing: -.02em; }
     .brand-sub { font-size: 13px; color: #64748b; margin-bottom: 28px; line-height: 1.5; }
 
     /* ── Labels ── */
@@ -81,7 +237,7 @@
       display: block; font-size: 13px; font-weight: 700; color: #334155;
       margin-bottom: 8px; letter-spacing: .01em;
     }
-    .field > label .req { color: #2563eb; }
+    .field > label .req { color: #dc2626; }
     .field > label span.hint { font-weight: 400; color: #94a3b8; }
 
     /* ── Inputs ── */
@@ -105,7 +261,7 @@
       line-height: 1.65; transition: border-color .15s, box-shadow .15s;
     }
     input:focus, textarea:focus {
-      outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+      outline: none; border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220, 38, 38, .12);
     }
     input::placeholder, textarea::placeholder { color: #94a3b8; }
 
@@ -113,26 +269,26 @@
     .textarea-wrap { position: relative; }
     .reset-btn {
       position: absolute; top: 8px; right: 8px; z-index: 2;
-      background: #ffffff; color: #2563eb; border: 1px solid #cbd5e1;
+      background: #ffffff; color: #dc2626; border: 1px solid #cbd5e1;
       border-radius: 8px; width: 30px; height: 30px;
       font-size: 15px; line-height: 1; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       transition: background .15s, border-color .15s;
     }
-    .reset-btn:hover { background: #eff4ff; border-color: #2563eb; }
+    .reset-btn:hover { background: #fef2f2; border-color: #dc2626; }
     .textarea-wrap textarea { padding-top: 14px; }
 
     /* ── Dial button ── */
     #btnDial {
       width: 100%; margin-top: 8px; padding: 15px;
-      background: #2563eb; color: #fff;
+      background: #dc2626; color: #fff;
       border: none; border-radius: 12px;
       font-size: 15px; font-weight: 700; cursor: pointer;
       display: flex; align-items: center; justify-content: center; gap: 9px;
       transition: background .15s, opacity .15s;
       letter-spacing: .01em;
     }
-    #btnDial:hover:not(:disabled) { background: #1d4ed8; }
+    #btnDial:hover:not(:disabled) { background: #b91c1c; }
     #btnDial:disabled { opacity: .5; cursor: not-allowed; }
 
     .spinner {
@@ -156,7 +312,7 @@
     .log-card {
       background: #ffffff; border: 1px solid #e3eaf3; border-radius: 16px;
       display: flex; flex-direction: column; overflow: hidden;
-      box-shadow: 0 6px 24px rgba(37, 99, 235, .06);
+      box-shadow: 0 6px 24px rgba(220, 38, 38, .06);
     }
     .log-header {
       display: flex; align-items: center; justify-content: space-between;
@@ -168,7 +324,7 @@
       font-size: 11px; font-weight: 700; padding: 3px 11px; border-radius: 20px;
       letter-spacing: .06em; text-transform: uppercase; flex-shrink: 0;
     }
-    .status-pill.dialing     { background: #dbeafe; color: #1d4ed8; }
+    .status-pill.dialing     { background: #fee2e2; color: #b91c1c; }
     .status-pill.in-progress { background: #dcfce7; color: #15803d; }
     .status-pill.completed   { background: #dcfce7; color: #15803d; }
     .status-pill.ended       { background: #f1f5f9; color: #64748b; }
@@ -188,7 +344,7 @@
       width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
       display: flex; align-items: center; justify-content: center; font-size: 12px;
     }
-    .msg.bot .avatar       { background: #dbeafe; }
+    .msg.bot .avatar       { background: #fee2e2; }
     .msg.candidate .avatar { background: #e2e8f0; }
 
     .bubble {
@@ -196,7 +352,7 @@
       font-size: 13px; line-height: 1.55;
     }
     .msg.bot .bubble       { background: #f1f5f9; color: #1e293b; border-bottom-left-radius: 4px; }
-    .msg.candidate .bubble { background: #dbeafe; color: #1e3a8a; border-bottom-right-radius: 4px; }
+    .msg.candidate .bubble { background: #fee2e2; color: #7f1d1d; border-bottom-right-radius: 4px; }
     .msg.sys .bubble       { background: none; color: #94a3b8; font-size: 11px; font-style: italic; padding: 1px 0; }
 
     /* ── Outcome banner ── */
@@ -205,7 +361,7 @@
       font-size: 13px; font-weight: 600; text-align: center; display: none;
     }
     .outcome-banner.shortlisted    { display: block; background: #ecfdf5; border: 1px solid #a7f3d0; color: #047857; }
-    .outcome-banner.callback       { display: block; background: #dbeafe; border: 1px solid #93c5fd; color: #1d4ed8; }
+    .outcome-banner.callback       { display: block; background: #fee2e2; border: 1px solid #fca5a5; color: #b91c1c; }
     .outcome-banner.not_interested { display: block; background: #f1f5f9; border: 1px solid #e2e8f0; color: #64748b; }
     .outcome-banner.withdrawn      { display: block; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
 
@@ -262,6 +418,36 @@
     html[data-theme="dark"] .answer-row { border-color: #1f2a3a; }
     html[data-theme="dark"] .msg.bot .bubble { background: #334155; color: #e2e8f0; }
     html[data-theme="dark"] .reset-btn { background: #0f172a; border-color: #334155; }
+    /* dark-mode sidebar tabs */
+    html[data-theme="dark"] .sidebar { background: #0b1220; border-color: #1f2a3a; }
+    html[data-theme="dark"] .sidebar-heading { color: #94a3b8; }
+    html[data-theme="dark"] .sidebar-item { background: #0b1220; border-top-color: #1f2a3a; color: #e2e8f0; }
+    html[data-theme="dark"] .sidebar-item:last-child { border-bottom-color: #1f2a3a; }
+    html[data-theme="dark"] .sidebar-item:hover { background: #3a1e1e; }
+    html[data-theme="dark"] .sidebar-item.active { background: #3a1e1e; color: #fecaca; border-left-color: #ef4444; }
+    html[data-theme="dark"] .sidebar-item .ico { background: #24344d; }
+    html[data-theme="dark"] .sidebar-item.soon .ico { background: #1f2a3a; }
+    html[data-theme="dark"] .sidebar-item .soon-tag { background: #24344d; color: #64748b; }
+    /* dark-mode page shell */
+    html[data-theme="dark"] .scroll-area {
+      background:
+        radial-gradient(820px 380px at 100% -5%, rgba(220,38,38,.12), transparent 60%),
+        radial-gradient(680px 400px at -5% 105%, rgba(220,38,38,.08), transparent 55%),
+        #0f172a;
+    }
+    html[data-theme="dark"] .page-title { color: #e2e8f0; }
+    html[data-theme="dark"] .page-sub { color: #94a3b8; }
+    html[data-theme="dark"] .view .card, html[data-theme="dark"] .view .log-card { box-shadow: none; }
+    /* dark-mode: keep names & labels readable */
+    html[data-theme="dark"] .cr-name { color: #e2e8f0; }
+    html[data-theme="dark"] .call-row { border-color: #334155; }
+    html[data-theme="dark"] .call-row:hover { background: #3a1e1e; border-color: #ef4444; }
+    html[data-theme="dark"] .call-row.active { background: #4c1d1d; border-color: #ef4444; }
+    html[data-theme="dark"] .fitrow .top .lab { color: #e2e8f0; }
+    html[data-theme="dark"] .fitrow .top .det { color: #94a3b8; }
+    html[data-theme="dark"] .ind-row .name { color: #cbd5e1; }
+    html[data-theme="dark"] .a-label { color: #94a3b8; }
+    html[data-theme="dark"] .msg.candidate .bubble { background: #4c1d1d; color: #fee2e2; }
   </style>
 </head>
 <body>
@@ -276,8 +462,65 @@
   </div>
 </nav>
 
+<!-- ── Left sidebar ────────────────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-heading">Menu</div>
+  <button class="sidebar-item active" data-target="dial">
+    <span class="ico"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
+    <span class="label">Dial Out</span>
+  </button>
+  <button class="sidebar-item" data-target="calls">
+    <span class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg></span>
+    <span class="label">Call History</span>
+  </button>
+  <div class="sidebar-heading">Analysis</div>
+  <button class="sidebar-item" data-target="summary">
+    <span class="ico"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 20l1.3-3.9A8.4 8.4 0 0 1 3.6 8 8.4 8.4 0 0 1 12 3.6a8.4 8.4 0 0 1 9 7.9z"/><path d="M8 11h8M8 14h5"/></svg></span>
+    <span class="label">AI Summary</span>
+  </button>
+  <button class="sidebar-item" data-target="answers">
+    <span class="ico"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></svg></span>
+    <span class="label">Structured Answers</span>
+  </button>
+  <button class="sidebar-item" data-target="fit">
+    <span class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/></svg></span>
+    <span class="label">Fit Score</span>
+  </button>
+  <button class="sidebar-item" data-target="analytics">
+    <span class="ico"><svg viewBox="0 0 24 24"><path d="M4 4v16h16"/><path d="M8.5 16v-3M13 16v-6M17.5 16v-9"/></svg></span>
+    <span class="label">Analytics</span>
+  </button>
+</aside>
+
 <!-- ── Scrollable content (starts below the navbar) ────────────────────── -->
 <div class="scroll-area">
+
+<!-- ══ VIEW: Dial Out ══════════════════════════════════════════════════ -->
+<div class="view active" id="view-dial">
+
+  <div class="page-header">
+    <div class="ph-text">
+      <div class="page-title">Dial Out</div>
+      <div class="page-sub">Start an AI screening call — enter the candidate's details and job profile, then dial. The bot conducts the screening and the transcript flows into your analysis.</div>
+    </div>
+    <div class="ph-illo" aria-hidden="true">
+      <svg viewBox="0 0 160 104" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="78" cy="95" rx="60" ry="7" fill="#fde2e2"/>
+        <rect x="104" y="12" width="46" height="30" rx="9" fill="#dc2626"/>
+        <path d="M116 42 v11 l11 -11 z" fill="#dc2626"/>
+        <circle cx="115" cy="27" r="3" fill="#fff"/><circle cx="127" cy="27" r="3" fill="#fff"/><circle cx="139" cy="27" r="3" fill="#fff"/>
+        <path d="M42 95 C42 67 54 59 70 59 C86 59 98 67 98 95 Z" fill="#dc2626"/>
+        <rect x="63" y="50" width="14" height="14" rx="4" fill="#f6bfa0"/>
+        <circle cx="70" cy="40" r="17" fill="#f8c9a8"/>
+        <path d="M53 40 a17 17 0 0 1 34 0 l-4 0 a13 13 0 0 0 -26 0 z" fill="#3b2f2a"/>
+        <path d="M51 40 a19 19 0 0 1 38 0" fill="none" stroke="#0f172a" stroke-width="3.5" stroke-linecap="round"/>
+        <rect x="47" y="38" width="8" height="13" rx="4" fill="#0f172a"/>
+        <rect x="85" y="38" width="8" height="13" rx="4" fill="#0f172a"/>
+        <path d="M49 51 q-5 8 3 14 h6" fill="none" stroke="#0f172a" stroke-width="3.5" stroke-linecap="round"/>
+        <circle cx="59" cy="65" r="2.6" fill="#f59e0b"/>
+      </svg>
+    </div>
+  </div>
 
 <!-- ── Form column ─────────────────────────────────────────────────────── -->
 <div class="col-form">
@@ -353,6 +596,140 @@
       <div id="answerRows"></div>
     </div>
 
+  </div>
+</div>
+
+</div><!-- /#view-dial -->
+
+<!-- ══ VIEW: Call History ══════════════════════════════════════════════ -->
+<div class="view" id="view-calls">
+  <div class="page-header">
+    <div class="ph-text">
+      <div class="page-title">Call History</div>
+      <div class="page-sub">Every screening call and its full transcript. Select a call to read the conversation and open its recording.</div>
+    </div>
+    <div class="ph-illo" aria-hidden="true">
+      <svg viewBox="0 0 130 96" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="65" cy="88" rx="46" ry="6" fill="#fde2e2"/>
+        <rect x="20" y="26" width="44" height="46" rx="6" fill="#fff" stroke="#fbcaca" stroke-width="2"/>
+        <rect x="28" y="36" width="28" height="4" rx="2" fill="#fca5a5"/><rect x="28" y="46" width="28" height="4" rx="2" fill="#fca5a5"/><rect x="28" y="56" width="18" height="4" rx="2" fill="#fca5a5"/>
+        <circle cx="88" cy="46" r="22" fill="#fef2f2" stroke="#dc2626" stroke-width="4"/>
+        <path d="M88 34 v12 l8 5" fill="none" stroke="#dc2626" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+  <div class="card" style="max-width: 340px; width: 100%;">
+    <div class="brand-sub" style="margin-top:0;">Stored calls &amp; transcripts.</div>
+    <button id="btnRefreshCalls" class="rec-link" style="cursor:pointer; border-color:#dc2626;">↻ Refresh</button>
+    <div class="calls-list" id="callsList"></div>
+  </div>
+  <div class="card" style="max-width: 560px; width: 100%;">
+    <div id="callDetail"><div class="detail-empty big">Select a call on the left to view its transcript.</div></div>
+  </div>
+</div>
+
+<!-- ══ VIEW: AI Summary ════════════════════════════════════════════════ -->
+<div class="view" id="view-summary">
+  <div class="page-header">
+    <div class="ph-text">
+      <div class="page-title">AI Summary</div>
+      <div class="page-sub">A concise, AI-generated recap of each screening call — experience, current role, salary, notice, and overall impression.</div>
+    </div>
+    <div class="ph-illo" aria-hidden="true">
+      <svg viewBox="0 0 130 96" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="65" cy="88" rx="46" ry="6" fill="#fde2e2"/>
+        <rect x="26" y="24" width="66" height="42" rx="12" fill="#dc2626"/>
+        <path d="M40 66 v12 l14 -12 z" fill="#dc2626"/>
+        <rect x="38" y="38" width="42" height="4" rx="2" fill="#fca5a5"/><rect x="38" y="48" width="30" height="4" rx="2" fill="#fca5a5"/>
+        <path d="M102 28 l3.2 8.4 8.4 3.2 -8.4 3.2 -3.2 8.4 -3.2 -8.4 -8.4 -3.2 8.4 -3.2 z" fill="#f59e0b"/>
+      </svg>
+    </div>
+  </div>
+  <div class="card" style="max-width: 340px; width: 100%;">
+    <div class="brand-sub" style="margin-top:0;">Pick a call to generate its summary.</div>
+    <button id="btnRefreshSummary" class="rec-link" style="cursor:pointer; border-color:#dc2626;">↻ Refresh</button>
+    <div class="calls-list" id="summaryList"></div>
+  </div>
+  <div class="card" style="max-width: 560px; width: 100%;">
+    <div id="summaryDetail"><div class="detail-empty big">Select a call on the left.</div></div>
+  </div>
+</div>
+<!-- ══ VIEW: Structured Answers ════════════════════════════════════════ -->
+<div class="view" id="view-answers">
+  <div class="page-header">
+    <div class="ph-text">
+      <div class="page-title">Structured Answers</div>
+      <div class="page-sub">The candidate's spoken replies extracted into clean, comparable fields — experience, CTC, notice period, industry, relocation and more.</div>
+    </div>
+    <div class="ph-illo" aria-hidden="true">
+      <svg viewBox="0 0 130 96" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="65" cy="88" rx="46" ry="6" fill="#fde2e2"/>
+        <rect x="38" y="20" width="54" height="60" rx="7" fill="#fff" stroke="#fbcaca" stroke-width="2"/>
+        <rect x="52" y="14" width="26" height="12" rx="4" fill="#dc2626"/>
+        <path d="M48 38 l4 4 7 -8" fill="none" stroke="#22c55e" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="64" y="36" width="20" height="4" rx="2" fill="#fca5a5"/>
+        <path d="M48 52 l4 4 7 -8" fill="none" stroke="#22c55e" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="64" y="50" width="20" height="4" rx="2" fill="#fca5a5"/>
+        <path d="M48 66 l4 4 7 -8" fill="none" stroke="#22c55e" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="64" y="64" width="14" height="4" rx="2" fill="#fca5a5"/>
+      </svg>
+    </div>
+  </div>
+  <div class="card" style="max-width: 340px; width: 100%;">
+    <div class="brand-sub" style="margin-top:0;">Extract a candidate's answers into fields.</div>
+    <button id="btnRefreshAnswers" class="rec-link" style="cursor:pointer; border-color:#dc2626;">↻ Refresh</button>
+    <div class="calls-list" id="answersList"></div>
+  </div>
+  <div class="card" style="max-width: 560px; width: 100%;">
+    <div id="answersDetail"><div class="detail-empty big">Select a call on the left.</div></div>
+  </div>
+</div>
+
+<!-- ══ VIEW: Fit Score ════════════════════════════════════════════════ -->
+<div class="view" id="view-fit">
+  <div class="page-header">
+    <div class="ph-text">
+      <div class="page-title">Fit Score</div>
+      <div class="page-sub">A 0–100 score of each candidate against the job profile, with a transparent per-criterion breakdown. No guesswork — pure rules.</div>
+    </div>
+    <div class="ph-illo" aria-hidden="true">
+      <svg viewBox="0 0 130 96" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="65" cy="88" rx="46" ry="6" fill="#fde2e2"/>
+        <path d="M28 74 a37 37 0 0 1 74 0" fill="none" stroke="#fde2e2" stroke-width="10" stroke-linecap="round"/>
+        <path d="M28 74 a37 37 0 0 1 58 -32" fill="none" stroke="#dc2626" stroke-width="10" stroke-linecap="round"/>
+        <line x1="65" y1="74" x2="86" y2="50" stroke="#0f2350" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="65" cy="74" r="6" fill="#0f2350"/>
+      </svg>
+    </div>
+  </div>
+  <div class="card" style="max-width: 340px; width: 100%;">
+    <div class="brand-sub" style="margin-top:0;">Score a candidate against the job profile.</div>
+    <button id="btnRefreshFit" class="rec-link" style="cursor:pointer; border-color:#dc2626;">↻ Refresh</button>
+    <div class="calls-list" id="fitList"></div>
+  </div>
+  <div class="card" style="max-width: 560px; width: 100%;">
+    <div id="fitDetail"><div class="detail-empty big">Select a call on the left.</div></div>
+  </div>
+</div>
+
+<!-- ══ VIEW: Analytics ════════════════════════════════════════════════ -->
+<div class="view" id="view-analytics">
+  <div class="page-header">
+    <div class="ph-text">
+      <div class="page-title">Analytics</div>
+      <div class="page-sub">Patterns across your whole candidate pool — averages, fit scores, relocation appetite and industry mix.</div>
+    </div>
+    <div class="ph-illo" aria-hidden="true">
+      <svg viewBox="0 0 130 96" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="65" cy="88" rx="46" ry="6" fill="#fde2e2"/>
+        <rect x="30" y="52" width="12" height="26" rx="3" fill="#fca5a5"/><rect x="52" y="40" width="12" height="38" rx="3" fill="#fca5a5"/><rect x="74" y="30" width="12" height="48" rx="3" fill="#dc2626"/><rect x="96" y="22" width="12" height="56" rx="3" fill="#b91c1c"/>
+        <path d="M30 50 L58 40 L80 30 L102 20" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="102" cy="20" r="3.6" fill="#f59e0b"/>
+      </svg>
+    </div>
+  </div>
+  <div class="card" style="max-width: 720px; width: 100%;">
+    <div class="brand" style="justify-content:flex-end; display:flex;">
+      <button id="btnRefreshAnalytics" class="rec-link" style="cursor:pointer; border-color:#dc2626; margin:0;">↻ Refresh</button>
+    </div>
+    <div class="brand-sub" style="margin-top:0;">Aggregate stats across all stored calls.</div>
+    <div id="analyticsBox"><div class="detail-empty">Loading…</div></div>
   </div>
 </div>
 
@@ -437,7 +814,7 @@
     } catch (e) {
       btn.classList.remove('loading');
       btn.disabled = false;
-      showBanner('err', '⚠  Job Profile is not valid JSON:\n' + e.message);
+      showBanner('err', '⚠  The Job Profile isn’t valid JSON — please check the format.');
       return;
     }
 
@@ -458,7 +835,7 @@
       btn.classList.remove('loading');
 
       if (!data.ok) {
-        showBanner('err', '⚠  ' + data.error + (data.detail ? '\n\n' + JSON.stringify(data.detail, null, 2) : ''));
+        showBanner('err', '⚠  ' + friendlyError(res.status, data.error));
         btn.disabled = false;
         return;
       }
@@ -472,7 +849,7 @@
     } catch (e) {
       btn.classList.remove('loading');
       btn.disabled = false;
-      showBanner('err', '⚠  ' + e.message);
+      showBanner('err', '⚠  ' + friendlyError(0, e.message));
     }
   });
 
@@ -578,9 +955,376 @@
     el.textContent = msg;
   }
 
+  // ── Sidebar: switch views ──────────────────────────────────────────────
+  document.querySelectorAll('.sidebar-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.getAttribute('data-target');
+      document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      const view = document.getElementById('view-' + target);
+      if (view) view.classList.add('active');
+      if (target === 'calls')     loadCalls();
+      if (target === 'summary')   loadSummaryCalls();
+      if (target === 'answers')   loadAnswersCalls();
+      if (target === 'fit')       loadFitCalls();
+      if (target === 'analytics') loadAnalytics();
+    });
+  });
+
+  // Shared: render the call list into an element, with a per-row status tag + click handler.
+  async function renderCallList(listEl, tagFn, onPick) {
+    listEl.innerHTML = '<div class="detail-empty" style="padding:16px;">Loading…</div>';
+    try {
+      const calls = (await (await fetch('/api/calls')).json()).calls || [];
+      if (!calls.length) { listEl.innerHTML = '<div class="detail-empty" style="padding:16px;">No calls stored yet.</div>'; return; }
+      listEl.innerHTML = '';
+      calls.forEach(c => {
+        const row = document.createElement('div');
+        row.className = 'call-row';
+        row.innerHTML = `<div class="cr-name">${esc(c.candidateName || '(no name)')}</div><div class="cr-meta">${esc(c.to || c.callId)} · ${tagFn(c)}</div>`;
+        row.addEventListener('click', () => {
+          listEl.querySelectorAll('.call-row').forEach(r => r.classList.remove('active'));
+          row.classList.add('active');
+          onPick(c.callId);
+        });
+        listEl.appendChild(row);
+      });
+    } catch (e) {
+      listEl.innerHTML = '<div class="detail-empty" style="padding:16px;">Failed to load calls.</div>';
+    }
+  }
+  const noTranscript = c => (c.transcript && c.transcript.length) ? '' : '⏳ no transcript';
+
+  // ── Structured Answers ──────────────────────────────────────────────────
+  if ($('btnRefreshAnswers')) $('btnRefreshAnswers').addEventListener('click', loadAnswersCalls);
+  function loadAnswersCalls() {
+    renderCallList($('answersList'), c => c.structuredAnswers ? '🧩 extracted' : (noTranscript(c) || '📄 transcript'), loadAnswersDetail);
+  }
+  const ANSWER_LABELS = {
+    years_experience: 'Years of experience', current_location: 'Current location',
+    current_employer: 'Current employer', open_to_relocation: 'Open to relocation',
+    current_ctc_lakhs: 'Current CTC (lakhs)', notice_period_days: 'Notice period (days)',
+    industry: 'Industry', max_monthly_billing_lakhs: 'Max monthly billing (lakhs)',
+  };
+  async function loadAnswersDetail(id) {
+    const box = $('answersDetail');
+    const stop = startCooking(box);
+    try {
+      const c = (await (await fetch('/api/calls/' + encodeURIComponent(id))).json()).call;
+      stop();
+      const has = c.transcript && c.transcript.length;
+      const aUsed = c.answersCount || 0, aCapped = aUsed >= 3, aCanRun = has && !aCapped;
+      let html = `<div class="brand"><div class="brand-name" style="font-size:18px;">${esc(c.candidateName || '(no name)')}</div></div>`;
+      html += `<button id="btnExtract" class="btn-primary" ${aCanRun ? '' : 'disabled'}>${aCapped ? 'Limit reached (3/3)' : (c.structuredAnswers ? 'Re-extract' : 'Extract answers')}${(!aCapped && aUsed > 0) ? ' · ' + aUsed + '/3' : ''}</button>`;
+      html += `<div id="answersBox" style="margin-top:14px;"></div>`;
+      box.innerHTML = html;
+      if (c.structuredAnswers) renderAnswers(c.structuredAnswers);
+      else $('answersBox').innerHTML = `<div class="detail-empty">${has ? 'No answers yet — click "Extract answers".' : 'No transcript to extract from.'}</div>`;
+      if (aCanRun) $('btnExtract').addEventListener('click', () => extractAnswers(id));
+    } catch (e) {
+      stop();
+      box.innerHTML = `<div class="detail-empty" style="color:#b91c1c;">${esc(friendlyError(0, e.message))}</div>`;
+    }
+  }
+  function renderAnswers(a) {
+    const rows = Object.keys(ANSWER_LABELS).map(k => {
+      const v = a[k]; const val = (v === null || v === undefined || v === '') ? '—' : v;
+      return `<div class="answer-row"><span class="a-label">${ANSWER_LABELS[k]}</span><span class="a-value">${esc(val)}</span></div>`;
+    }).join('');
+    $('answersBox').innerHTML = rows;
+  }
+  async function extractAnswers(id) {
+    const btn = $('btnExtract'); btn.disabled = true; btn.textContent = 'Working…';
+    const stop = startCooking($('answersBox'));
+    let keepDisabled = false;
+    try {
+      const res = await fetch('/api/calls/' + encodeURIComponent(id) + '/answers', { method: 'POST' });
+      const d = await res.json();
+      stop();
+      if (!d.ok) {
+        $('answersBox').innerHTML = `<div class="detail-empty" style="color:#b91c1c;">${esc(friendlyError(res.status, d.error))}</div>`;
+        if (res.status === 429) { btn.textContent = 'Limit reached (3/3)'; keepDisabled = true; }
+        else btn.textContent = 'Try again';
+      } else {
+        renderAnswers(d.answers);
+        const rem = (d.remaining != null) ? d.remaining : 3 - (d.count || 0);
+        if (rem <= 0) { btn.textContent = 'Limit reached (3/3)'; keepDisabled = true; }
+        else btn.textContent = 'Re-extract · ' + (d.count || 0) + '/3';
+      }
+    } catch (e) { stop(); $('answersBox').innerHTML = `<div class="detail-empty" style="color:#b91c1c;">${esc(friendlyError(0, e.message))}</div>`; btn.textContent = 'Try again'; }
+    finally { if (!keepDisabled) btn.disabled = false; }
+  }
+
+  // ── Fit Score ───────────────────────────────────────────────────────────
+  if ($('btnRefreshFit')) $('btnRefreshFit').addEventListener('click', loadFitCalls);
+  function loadFitCalls() {
+    renderCallList($('fitList'), c => (typeof c.fitScore === 'number') ? `🎯 ${c.fitScore}/100` : (noTranscript(c) || '📄 transcript'), loadFitDetail);
+  }
+  async function loadFitDetail(id) {
+    const box = $('fitDetail'); box.innerHTML = '<div class="detail-empty">Loading…</div>';
+    const c = (await (await fetch('/api/calls/' + encodeURIComponent(id))).json()).call;
+    const has = c.transcript && c.transcript.length;
+    let html = `<div class="brand"><div class="brand-name" style="font-size:18px;">${esc(c.candidateName || '(no name)')}</div></div>`;
+    html += `<button id="btnFit" class="btn-primary" ${has ? '' : 'disabled'}>${(typeof c.fitScore === 'number') ? 'Recompute score' : 'Compute fit score'}</button>`;
+    html += `<div id="fitBox" style="margin-top:14px;"></div>`;
+    box.innerHTML = html;
+    if (typeof c.fitScore === 'number') renderFit({ score: c.fitScore, band: c.fitBand, breakdown: c.fitBreakdown });
+    else $('fitBox').innerHTML = `<div class="detail-empty">${has ? 'No score yet — click "Compute fit score".' : 'No transcript to analyze.'}</div>`;
+    if (has) $('btnFit').addEventListener('click', () => computeFit(id));
+  }
+  function renderFit(r) {
+    const color = r.score >= 75 ? '#047857' : r.score >= 50 ? '#d97706' : '#b91c1c';
+    let html = `<div class="fit-score-big" style="color:${color};">${r.score}<span style="font-size:18px;color:#94a3b8;">/100</span></div>`;
+    html += `<div class="fit-band" style="color:${color};">${esc(r.band || '')}</div>`;
+    (r.breakdown || []).forEach(b => {
+      const pct = Math.round((b.points / b.max) * 100);
+      html += `<div class="fitrow"><div class="top"><span class="lab">${esc(b.label)}</span><span class="det">${esc(b.detail)}</span><span class="pts">${b.points}/${b.max}</span></div><div class="track"><span style="width:${pct}%;"></span></div></div>`;
+    });
+    $('fitBox').innerHTML = html;
+  }
+  async function computeFit(id) {
+    const btn = $('btnFit'); btn.disabled = true; btn.textContent = 'Working…';
+    const stop = startCooking($('fitBox'));
+    try {
+      const res = await fetch('/api/calls/' + encodeURIComponent(id) + '/fit', { method: 'POST' });
+      const d = await res.json();
+      stop();
+      if (!d.ok) { $('fitBox').innerHTML = `<div class="detail-empty" style="color:#b91c1c;">${esc(friendlyError(res.status, d.error))}</div>`; }
+      else renderFit(d);
+    } catch (e) { stop(); $('fitBox').innerHTML = `<div class="detail-empty" style="color:#b91c1c;">${esc(friendlyError(0, e.message))}</div>`; }
+    finally { btn.disabled = false; btn.textContent = 'Recompute score'; }
+  }
+
+  // ── Analytics ─────────────────────────────────────────────────────────────
+  if ($('btnRefreshAnalytics')) $('btnRefreshAnalytics').addEventListener('click', loadAnalytics);
+  async function loadAnalytics() {
+    const box = $('analyticsBox'); box.innerHTML = '<div class="detail-empty">Loading…</div>';
+    try {
+      const a = (await (await fetch('/api/analytics')).json()).analytics;
+      const card = (n, l) => `<div class="stat"><div class="n">${n == null ? '—' : n}</div><div class="l">${l}</div></div>`;
+      let html = '<div class="stat-grid">';
+      html += card(a.totalCalls, 'Total calls');
+      html += card(a.withTranscript, 'With transcript');
+      html += card(a.withAnswers, 'Answers extracted');
+      html += card(a.avgFitScore, 'Avg fit score');
+      html += card(a.avgExperience, 'Avg experience (yrs)');
+      html += card(a.avgCtc, 'Avg CTC (lakhs)');
+      html += card(a.avgNoticeDays, 'Avg notice (days)');
+      html += card(a.relocationPct == null ? null : a.relocationPct + '%', 'Open to relocation');
+      html += '</div>';
+      const inds = Object.entries(a.industries || {}).sort((x, y) => y[1] - x[1]);
+      if (inds.length) {
+        const max = Math.max(...inds.map(i => i[1]));
+        html += '<div style="margin-top:18px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">Industry distribution</div>';
+        inds.forEach(([name, cnt]) => {
+          html += `<div class="ind-row"><span class="name">${esc(name)}</span><span class="track"><span style="width:${Math.round(cnt / max * 100)}%;"></span></span><span class="cnt">${cnt}</span></div>`;
+        });
+      }
+      box.innerHTML = html;
+    } catch (e) {
+      box.innerHTML = '<div class="detail-empty" style="color:#b91c1c;">⚠ Failed to load analytics.</div>';
+    }
+  }
+
+  // ── Call History: list + transcript viewer ──────────────────────────────
+  const $refreshCalls = $('btnRefreshCalls');
+  if ($refreshCalls) $refreshCalls.addEventListener('click', loadCalls);
+
+  async function loadCalls() {
+    const list = $('callsList');
+    list.innerHTML = '<div class="detail-empty" style="padding:16px;">Loading…</div>';
+    try {
+      const res = await fetch('/api/calls');
+      const d = await res.json();
+      const calls = d.calls || [];
+      if (!calls.length) { list.innerHTML = '<div class="detail-empty" style="padding:16px;">No calls stored yet.</div>'; return; }
+      list.innerHTML = '';
+      calls.forEach(c => {
+        const row = document.createElement('div');
+        row.className = 'call-row';
+        row.innerHTML =
+          `<div class="cr-name">${esc(c.candidateName || '(no name)')}</div>` +
+          `<div class="cr-meta">${esc(c.to || c.callId)} · ${c.transcriptComplete ? '📄 transcript' : '⏳ no transcript'} · ${esc((c.createdAt || '').replace('T', ' ').slice(0, 16))}</div>`;
+        row.addEventListener('click', () => {
+          document.querySelectorAll('.call-row').forEach(r => r.classList.remove('active'));
+          row.classList.add('active');
+          loadCallDetail(c.callId);
+        });
+        list.appendChild(row);
+      });
+    } catch (e) {
+      list.innerHTML = '<div class="detail-empty" style="padding:16px;">Failed to load calls.</div>';
+    }
+  }
+
+  async function loadCallDetail(id) {
+    const box = $('callDetail');
+    box.innerHTML = '<div class="detail-empty">Loading…</div>';
+    try {
+      const res = await fetch('/api/calls/' + encodeURIComponent(id));
+      const d = await res.json();
+      if (!d.ok) { box.innerHTML = '<div class="detail-empty">Not found.</div>'; return; }
+      const c = d.call;
+      let html = `<div class="brand"><div class="brand-name" style="font-size:18px;">${esc(c.candidateName || '(no name)')}</div></div>`;
+      html += `<div class="brand-sub">${esc(c.to || '')} &nbsp;·&nbsp; ${esc((c.createdAt || '').replace('T', ' ').slice(0, 16))}</div>`;
+      if (c.recordingUrl) {
+        html += `<a class="rec-link" href="${esc(c.recordingUrl)}" target="_blank" rel="noopener">🎙️ Recording / transcription link</a>`;
+      }
+      html += '<div class="conversation" style="max-height:none; margin-top:14px; padding:0;">';
+      const t = c.transcript || [];
+      if (!t.length) {
+        html += '<div class="detail-empty">No transcript stored for this call yet.</div>';
+      } else {
+        t.forEach(m => {
+          if (m.speaker === 'bot') {
+            html += `<div class="msg bot"><div class="avatar">🤖</div><div class="bubble">${esc(m.text)}</div></div>`;
+          } else {
+            html += `<div class="msg candidate"><div class="bubble">${esc(m.text)}</div><div class="avatar">👤</div></div>`;
+          }
+        });
+      }
+      html += '</div>';
+      box.innerHTML = html;
+    } catch (e) {
+      box.innerHTML = '<div class="detail-empty">Failed to load transcript.</div>';
+    }
+  }
+
+  // ── AI Summary section ──────────────────────────────────────────────────
+  const $refreshSummary = $('btnRefreshSummary');
+  if ($refreshSummary) $refreshSummary.addEventListener('click', loadSummaryCalls);
+
+  async function loadSummaryCalls() {
+    const list = $('summaryList');
+    list.innerHTML = '<div class="detail-empty" style="padding:16px;">Loading…</div>';
+    try {
+      const res = await fetch('/api/calls');
+      const calls = (await res.json()).calls || [];
+      if (!calls.length) { list.innerHTML = '<div class="detail-empty" style="padding:16px;">No calls stored yet.</div>'; return; }
+      list.innerHTML = '';
+      calls.forEach(c => {
+        const row = document.createElement('div');
+        row.className = 'call-row';
+        const tag = c.aiSummary ? '🤖 summarized' : (c.transcriptComplete ? '📄 transcript' : '⏳ no transcript');
+        row.innerHTML = `<div class="cr-name">${esc(c.candidateName || '(no name)')}</div><div class="cr-meta">${esc(c.to || c.callId)} · ${tag}</div>`;
+        row.addEventListener('click', () => {
+          document.querySelectorAll('#summaryList .call-row').forEach(r => r.classList.remove('active'));
+          row.classList.add('active');
+          loadSummaryDetail(c.callId);
+        });
+        list.appendChild(row);
+      });
+    } catch (e) {
+      list.innerHTML = '<div class="detail-empty" style="padding:16px;">Failed to load calls.</div>';
+    }
+  }
+
+  async function loadSummaryDetail(id) {
+    const box = $('summaryDetail');
+    const stop = startCooking(box);
+    try {
+      const res = await fetch('/api/calls/' + encodeURIComponent(id));
+      const d = await res.json();
+      stop();
+      if (!d.ok) { box.innerHTML = '<div class="detail-empty">Not found.</div>'; return; }
+      const c = d.call;
+      const hasTranscript = c.transcript && c.transcript.length;
+      const jp = c.jobProfile || {};
+      let html = `<div class="brand"><div class="brand-name" style="font-size:18px;">${esc(c.candidateName || '(no name)')}</div></div>`;
+      html += `<div class="brand-sub">${esc(jp.job_title || '')}${jp.company ? ' · ' + esc(jp.company) : ''}</div>`;
+      const sUsed = c.aiSummaryCount || 0, sCapped = sUsed >= 3, sCanGen = hasTranscript && !sCapped;
+      html += `<button id="btnGenSummary" ${sCanGen ? '' : 'disabled'} style="background:#dc2626;color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer;font-family:inherit;${sCanGen ? '' : 'opacity:.5;cursor:not-allowed;'}">${sCapped ? 'Limit reached (3/3)' : (c.aiSummary ? 'Regenerate summary' : 'Generate summary')}${(!sCapped && sUsed > 0) ? ' · ' + sUsed + '/3' : ''}</button>`;
+      html += `<div id="summaryText" style="margin-top:14px; white-space:pre-wrap; font-size:13.5px; line-height:1.6;">`;
+      if (c.aiSummary)        html += esc(c.aiSummary);
+      else if (!hasTranscript) html += '<div class="detail-empty">No transcript to summarize yet.</div>';
+      else                     html += '<div class="detail-empty">No summary yet — click "Generate summary".</div>';
+      html += '</div>';
+      box.innerHTML = html;
+      const gen = $('btnGenSummary');
+      if (gen && hasTranscript) gen.addEventListener('click', () => generateSummary(c.callId, gen));
+    } catch (e) {
+      stop();
+      box.innerHTML = `<div class="detail-empty" style="color:#b91c1c;">${esc(friendlyError(0, e.message))}</div>`;
+    }
+  }
+
+  async function generateSummary(id, btn) {
+    const st = $('summaryText');
+    btn.disabled = true; btn.textContent = 'Working…';
+    const stop = startCooking(st);
+    let keepDisabled = false;
+    try {
+      const res = await fetch('/api/calls/' + encodeURIComponent(id) + '/summary', { method: 'POST' });
+      const d = await res.json();
+      stop();
+      if (!d.ok) {
+        st.innerHTML = `<div class="detail-empty" style="color:#b91c1c;">${esc(friendlyError(res.status, d.error))}</div>`;
+        if (res.status === 429) { btn.textContent = 'Limit reached (3/3)'; keepDisabled = true; }
+        else btn.textContent = 'Try again';
+      } else {
+        st.textContent = d.summary || '(empty summary)';
+        const rem = (d.remaining != null) ? d.remaining : 3 - (d.count || 0);
+        if (rem <= 0) { btn.textContent = 'Limit reached (3/3)'; keepDisabled = true; }
+        else btn.textContent = 'Regenerate summary · ' + (d.count || 0) + '/3';
+      }
+    } catch (e) {
+      stop();
+      st.innerHTML = `<div class="detail-empty" style="color:#b91c1c;">${esc(friendlyError(0, e.message))}</div>`;
+      btn.textContent = 'Try again';
+    } finally {
+      if (!keepDisabled) btn.disabled = false;
+    }
+  }
+
   function esc(s) {
     return String(s)
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Rotating "the AI is working" messages — cycles until we stop it.
+  const COOKING_FRAMES = [
+    ['✨', 'Warming up the model…'],
+    ['🧠', 'Processing with AI…'],
+    ['🍳', 'Cooking up the insights…'],
+    ['📖', 'Reading the conversation…'],
+    ['🔍', 'Analysing the responses…'],
+    ['📝', 'Drafting the result…'],
+    ['⚡', 'Almost ready…'],
+  ];
+  function startCooking(el) {
+    let i = 0;
+    el.innerHTML = `<div class="cooking"><div class="ck-icon">${COOKING_FRAMES[0][0]}</div><div class="ck-text">${COOKING_FRAMES[0][1]}</div></div>`;
+    const node = el.querySelector('.cooking');
+    const icon = node && node.querySelector('.ck-icon');
+    const text = node && node.querySelector('.ck-text');
+    const timer = setInterval(() => {
+      i = (i + 1) % COOKING_FRAMES.length;
+      if (!node) return;
+      node.style.opacity = '0';
+      setTimeout(() => {
+        if (!node) return;
+        if (icon) icon.textContent = COOKING_FRAMES[i][0];
+        if (text) text.textContent = COOKING_FRAMES[i][1];
+        node.style.opacity = '1';
+      }, 200);
+    }, 1500);
+    return () => clearInterval(timer);
+  }
+
+  // Turn any technical/server error into a calm, user-friendly message.
+  function friendlyError(status, msg) {
+    msg = String(msg || '');
+    if (status === 429 || /limit reached/i.test(msg)) return msg;                        // already user-facing
+    if (/no transcript/i.test(msg)) return 'This call doesn’t have a transcript yet.';
+    if (/api key not set|not configured/i.test(msg)) return 'The AI service isn’t set up yet — please contact your admin.';
+    if (/not valid json|must be valid json/i.test(msg)) return 'The Job Profile isn’t valid JSON — please check the format.';
+    if (/valid 10-digit|mobile number|required field/i.test(msg)) return msg;             // input hints — keep
+    if (status === 502 || /gemini|unavailable|overloaded|fetch failed|timeout|timed out|network|ECONN|socket|503|500/i.test(msg))
+      return 'The AI is a little busy right now — please try again in a moment.';
+    if (/not associated|not set up|from number|caller id|service_not/i.test(msg))
+      return 'This number isn’t set up for calling yet — please contact your admin.';
+    return 'Something went wrong — please try again.';
   }
 </script>
 </body>
