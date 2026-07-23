@@ -66,6 +66,49 @@ function log(session, type, message) {
   console.log(`[${session.id}] ${type.toUpperCase()}: ${message}`);
 }
 
+// Translate a raw EnableX webhook event into a short, human-readable line for the
+// Live Activity feed, phrased in conversational terms (bot speaking, waiting for
+// the candidate, answer captured…). Returns '' for events we don't surface.
+function describeEvent(ev, session) {
+  const st = String(ev.state || '').toLowerCase();
+  const ps = String(ev.playstate || ev.play_state || '').toLowerCase();
+
+  // ── Play / speech events (the turn-by-turn conversation flow) ──
+  if (ps === 'playstarted' || ps === 'playing') {
+    // First prompt after connect = the introduction; later prompts = bot questions.
+    if (session) session.playCount = (session.playCount || 0) + 1;
+    return (session && session.playCount === 1)
+      ? 'Introduction line is now playing'
+      : 'Bot is speaking…';
+  }
+  if (ps === 'playfinished' || ps === 'playstopped')
+    return 'Bot finished speaking — waiting for the candidate to answer';
+  if (ps === 'speechcollected' || ps === 'asr_result')
+    return 'Candidate answered — response captured';
+  if (ps === 'menutimeout' || ps === 'collecttimeout')
+    return 'No answer yet — still waiting for input';
+  if (ps === 'dtmf')
+    return 'Keypad input received';
+
+  // ── Call lifecycle ──
+  const STATE = {
+    incomingcall: 'Call initiated',
+    outgoingcall: 'Dialing the candidate',
+    trying:       'Connecting the call',
+    ringing:      'Ringing the candidate',
+    answered:     'Candidate picked up',
+    connected:    'Call connected',
+    inprogress:   'Call in progress',
+    disconnected: 'Call disconnected',
+    callend:      'Call ended',
+    hangup:       'Call hung up',
+  };
+  if (st && STATE[st]) return STATE[st];
+  if (ps) return `Play event: ${ps}`;
+  if (st) return `Call event: ${st}`;
+  return '';
+}
+
 // ─── POST /api/dial ────────────────────────────────────────────────────────
 
 app.post('/api/dial', async (req, res) => {
@@ -370,6 +413,10 @@ app.post('/event', async (req, res) => {
     console.log('Webhook for unknown call:', voiceId, JSON.stringify(ev).slice(0, 120));
     return;
   }
+
+  // Surface every incoming webhook event on the Live Activity feed.
+  const desc = describeEvent(ev, session);
+  if (desc) log(session, 'event', desc);
 
   try {
     // ── Call state transitions ─────────────────────────────────────────

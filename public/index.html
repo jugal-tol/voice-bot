@@ -329,6 +329,48 @@
     .status-pill.completed   { background: #dcfce7; color: #15803d; }
     .status-pill.ended       { background: #f1f5f9; color: #64748b; }
 
+    /* ── Live activity feed (real-time call events under the status) ── */
+    .activity {
+      flex-shrink: 0; border-bottom: 1px solid #eef2f7;
+      background: #fafbfc; padding: 12px 20px 14px;
+    }
+    .activity-head {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; font-weight: 800; letter-spacing: .06em;
+      text-transform: uppercase; color: #64748b; margin-bottom: 10px;
+    }
+    .activity-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1; flex-shrink: 0;
+    }
+    .activity.on .activity-dot {
+      background: #16a34a; animation: pulse-dot 1.3s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(22,163,74,.5); }
+      50%      { box-shadow: 0 0 0 5px rgba(22,163,74,0); }
+    }
+    .activity-feed {
+      display: flex; flex-direction: column; gap: 7px;
+      max-height: 168px; overflow-y: auto;
+    }
+    .activity-empty { font-size: 12px; color: #94a3b8; padding: 4px 0; }
+    .act-row {
+      display: flex; align-items: flex-start; gap: 9px; font-size: 12.5px;
+      color: #334155; line-height: 1.35;
+      animation: popIn .24s cubic-bezier(.2,.7,.3,1) both;
+    }
+    .act-row .act-ico { flex-shrink: 0; font-size: 13px; line-height: 1.3; }
+    .act-row .act-msg { flex: 1; }
+    .act-row .act-time {
+      flex-shrink: 0; font-size: 10.5px; color: #94a3b8;
+      font-variant-numeric: tabular-nums; margin-left: 4px;
+    }
+    .act-row.warn  .act-msg { color: #b45309; }
+    .act-row.error .act-msg { color: #b91c1c; }
+    html[data-theme="dark"] .activity { background: #16202e; border-color: #24344d; }
+    html[data-theme="dark"] .act-row { color: #cbd5e1; }
+    html[data-theme="dark"] .activity-head { color: #94a3b8; }
+
     /* ── Conversation bubbles ── */
     .conversation {
       flex: 1; overflow-y: auto; padding: 18px 20px;
@@ -587,6 +629,15 @@
       <div class="status-pill dialing" id="statusPill">Dialing</div>
     </div>
 
+    <div class="activity" id="activity">
+      <div class="activity-head">
+        <span class="activity-dot"></span> Live Activity
+      </div>
+      <div class="activity-feed" id="activityFeed">
+        <div class="activity-empty">Waiting for call events…</div>
+      </div>
+    </div>
+
     <div class="conversation" id="conversation"></div>
 
     <div class="outcome-banner" id="outcomeBanner"></div>
@@ -781,9 +832,6 @@
   });
 
   // System log lines that should NOT be shown in the call status box (UI only).
-  const HIDDEN_LOG_EXACT = ['Call answered — opening line playing.'];
-  const HIDDEN_LOG_PREFIX = ['Call ended. Final state:'];
-
   // ── Dial ──────────────────────────────────────────────────────────────
   $('btnDial').addEventListener('click', async () => {
     clearInterval(pollTimer);
@@ -859,6 +907,8 @@
     $('logTitle').textContent = 'Live Call — ' + to;
     $('logMeta').textContent  = 'id: ' + callId;
     $('conversation').innerHTML = '';
+    $('activityFeed').innerHTML = '<div class="activity-empty">Waiting for call events…</div>';
+    $('activity').classList.add('on');
     $('answersPanel').style.display = 'none';
     $('answerRows').innerHTML = '';
     $('outcomeBanner').className = 'outcome-banner';
@@ -872,35 +922,74 @@
     const pill = $('statusPill');
     pill.className = 'status-pill ' + s;
     pill.textContent = { dialing: 'Dialing', 'in-progress': 'Live', completed: 'Completed', ended: 'Ended' }[s] || s;
-    if (s === 'completed' || s === 'ended') $('btnDial').disabled = false;
+    const done = (s === 'completed' || s === 'ended');
+    $('activity').classList.toggle('on', !done);
+    if (done) $('btnDial').disabled = false;
   }
 
   // ── Append new log entries ─────────────────────────────────────────────
+  // Spoken turns (bot/candidate) go to the conversation; everything else
+  // (call state + play/ASR events) streams into the Live Activity feed.
   function appendLogs(entries) {
     const conv = $('conversation');
+    const feed = $('activityFeed');
     for (let i = seenLogs; i < entries.length; i++) {
       const e = entries[i];
       if (!e.type || !e.message) continue;
-      // Hide selected internal status lines from the display (server unchanged).
-      if (e.type !== 'bot' && e.type !== 'candidate') {
-        if (HIDDEN_LOG_EXACT.includes(e.message)) continue;
-        if (HIDDEN_LOG_PREFIX.some(p => e.message.startsWith(p))) continue;
-      }
-      const div = document.createElement('div');
-      if (e.type === 'bot') {
-        div.className = 'msg bot';
-        div.innerHTML = `<div class="avatar">🤖</div><div class="bubble">${esc(e.message)}</div>`;
-      } else if (e.type === 'candidate') {
-        div.className = 'msg candidate';
-        div.innerHTML = `<div class="bubble">${esc(e.message)}</div><div class="avatar">👤</div>`;
+      if (e.type === 'bot' || e.type === 'candidate') {
+        const div = document.createElement('div');
+        if (e.type === 'bot') {
+          div.className = 'msg bot';
+          div.innerHTML = `<div class="avatar">🤖</div><div class="bubble">${esc(e.message)}</div>`;
+        } else {
+          div.className = 'msg candidate';
+          div.innerHTML = `<div class="bubble">${esc(e.message)}</div><div class="avatar">👤</div>`;
+        }
+        conv.appendChild(div);
       } else {
-        div.className = 'msg sys';
-        div.innerHTML = `<div class="bubble">${esc(e.message)}</div>`;
+        const empty = feed.querySelector('.activity-empty');
+        if (empty) empty.remove();
+        const cls = e.type === 'warn' ? ' warn' : (e.type === 'error' ? ' error' : '');
+        const row = document.createElement('div');
+        row.className = 'act-row' + cls;
+        row.innerHTML =
+          `<span class="act-ico">${actIcon(e)}</span>` +
+          `<span class="act-msg">${esc(e.message)}</span>` +
+          `<span class="act-time">${fmtClock(e.t)}</span>`;
+        feed.appendChild(row);
+        feed.scrollTop = feed.scrollHeight;
       }
-      conv.appendChild(div);
     }
     seenLogs = entries.length;
     conv.scrollTop = conv.scrollHeight;
+  }
+
+  // Pick a small icon for an activity row from its type/message.
+  function actIcon(e) {
+    if (e.type === 'warn')  return '⚠️';
+    if (e.type === 'error') return '⛔';
+    const m = (e.message || '').toLowerCase();
+    if (m.includes('captured') || m.includes('answered') || m.includes('response') || m.includes('speech') || m.includes('keypad')) return '🎙️';
+    if (m.includes('waiting') || m.includes('no answer') || m.includes('timeout') || m.includes('no response')) return '⌛';
+    if (m.includes('speaking') || m.includes('introduction') || m.includes('opening') || m.includes('playing') || m.includes('prompt')) return '🔊';
+    if (m.includes('placed') || m.includes('dial'))                       return '📲';
+    if (m.includes('ring'))                                               return '🔔';
+    if (m.includes('picked') || m.includes('connect'))                    return '📞';
+    if (m.includes('recording'))                                          return '⏺️';
+    if (m.includes('completed') || m.includes('finished'))                return '✅';
+    if (m.includes('ended') || m.includes('hung up') || m.includes('disconnect')) return '📴';
+    if (m.includes('state'))                                              return '🔀';
+    return '•';
+  }
+
+  // Short IST wall-clock "HH:mm:ss" for an activity timestamp.
+  function fmtClock(v) {
+    if (!v) return '';
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('en-GB', {
+      timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+    });
   }
 
   // ── Render collected answers ──────────────────────────────────────────
@@ -1145,7 +1234,7 @@
         row.className = 'call-row';
         row.innerHTML =
           `<div class="cr-name">${esc(c.candidateName || '(no name)')}</div>` +
-          `<div class="cr-meta">${esc(c.to || c.callId)} · ${c.transcriptComplete ? '📄 transcript' : '⏳ no transcript'} · ${esc((c.createdAt || '').replace('T', ' ').slice(0, 16))}</div>`;
+          `<div class="cr-meta">${esc(c.to || c.callId)} · ${c.transcriptComplete ? '📄 transcript' : '⏳ no transcript'} · ${fmtIST(c.createdAt)}</div>`;
         row.addEventListener('click', () => {
           document.querySelectorAll('.call-row').forEach(r => r.classList.remove('active'));
           row.classList.add('active');
@@ -1167,7 +1256,7 @@
       if (!d.ok) { box.innerHTML = '<div class="detail-empty">Not found.</div>'; return; }
       const c = d.call;
       let html = `<div class="brand"><div class="brand-name" style="font-size:18px;">${esc(c.candidateName || '(no name)')}</div></div>`;
-      html += `<div class="brand-sub">${esc(c.to || '')} &nbsp;·&nbsp; ${esc((c.createdAt || '').replace('T', ' ').slice(0, 16))}</div>`;
+      html += `<div class="brand-sub">${esc(c.to || '')} &nbsp;·&nbsp; ${fmtIST(c.createdAt)}</div>`;
       if (c.recordingUrl) {
         html += `<a class="rec-link" href="${esc(c.recordingUrl)}" target="_blank" rel="noopener">🎙️ Recording / transcription link</a>`;
       }
@@ -1280,6 +1369,21 @@
   function esc(s) {
     return String(s)
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Format a stored timestamp as "Wed, 16/07/2026, 14:55 (IST)" — Indian Standard
+  // Time, weekday, DD/MM/YYYY date and 24-hour clock. Accepts an ISO string
+  // (createdAt) and falls back gracefully if the value can't be parsed.
+  function fmtIST(v) {
+    if (!v) return '';
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return esc(String(v));
+    const s = d.toLocaleString('en-GB', {
+      timeZone: 'Asia/Kolkata',
+      weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    });
+    return esc(s) + ' (IST)';
   }
 
   // Rotating "the AI is working" messages — cycles until we stop it.
