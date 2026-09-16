@@ -39,7 +39,12 @@ app.post('/api/log-login', async (req, res) => {
 // Additive: expose the demo portal URL (if configured) so the client logout can
 // route through the portal to end the portal session too.
 app.get('/api/config', (req, res) => {
-  res.json({ portalUrl: process.env.PORTAL_URL || '' });
+  const primary = (process.env.ENABLEX_FROM_NUMBER || '').trim().replace(/^\+/, '');
+  const alt     = (process.env.ENABLEX_FROM_NUMBER_ALT || '').trim().replace(/^\+/, '');
+  const numbers = [];
+  if (primary) numbers.push({ value: primary, label: primary + ' — S2S', pipeline: 's2s' });
+  if (alt)     numbers.push({ value: alt,     label: alt + ' — Non-S2S', pipeline: 'non-s2s' });
+  res.json({ portalUrl: process.env.PORTAL_URL || '', numbers, primary, alt });
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -118,11 +123,18 @@ app.post('/api/dial', async (req, res) => {
       return res.status(400).json({ ok: false, error: 'Enter a valid 10-digit Indian mobile number (starting 6–9).' });
     }
 
-    // EnableX routes the caller ID WITHOUT a leading "+" (a "+" passes validation
-    // but the route silently rejects the call as "User busy"). Strip it defensively.
-    const from = (process.env.ENABLEX_FROM_NUMBER || '').trim().replace(/^\+/, '');
+    // Pick which EnableX project/number to dial from, based on the "Dial Number"
+    // dropdown. Each number has its OWN credentials and its OWN voice agent bound
+    // in the EnableX portal (which drives the conversation). EnableX routes the
+    // caller ID WITHOUT a leading "+" (a "+" silently fails as "User busy").
+    const primaryFrom  = (process.env.ENABLEX_FROM_NUMBER || '').trim().replace(/^\+/, '');
+    const altFrom      = (process.env.ENABLEX_FROM_NUMBER_ALT || '').trim().replace(/^\+/, '');
+    const selectedFrom = (req.body.fromNumber || '').trim().replace(/^\+/, '');
+    const useAlt  = Boolean(altFrom && selectedFrom === altFrom);
+    const from    = useAlt ? altFrom : primaryFrom;
+    const account = useAlt ? 'alt' : 'primary';
     if (!from) {
-      return res.status(500).json({ ok: false, error: 'ENABLEX_FROM_NUMBER is not set in the server config (.env).' });
+      return res.status(500).json({ ok: false, error: 'The selected dial number is not configured in the server (.env).' });
     }
 
     // Parse the Job Profile box as JSON. We pass these keys to the call as
@@ -158,7 +170,7 @@ app.post('/api/dial', async (req, res) => {
       industry:            profile.industry,
     };
 
-    const result = await enablex.makeOutboundCall({ to, from, openingText, eventUrl, customData });
+    const result = await enablex.makeOutboundCall({ to, from, openingText, eventUrl, customData, account });
 
     const voiceId = String(result.voice_id || result.call_id || result.id || '');
     if (!voiceId) {
@@ -169,7 +181,9 @@ app.post('/api/dial', async (req, res) => {
       id:           voiceId,
       to,
       from,
+      account,
       profile,
+      candidateName: (req.body.candidateName || '').trim(),
       state:        'node1',
       language:     'en',
       deadAirCount: 0,
@@ -186,6 +200,8 @@ app.post('/api/dial', async (req, res) => {
     // Additive: persist a call record so the transcript webhook can attach to it later.
     callStore.upsertCall(voiceId, {
       to,
+      from,                                   // which EnableX number placed the call
+      pipeline: useAlt ? 'non-s2s' : 's2s',   // which dropdown option was used
       candidateName: (req.body.candidateName || '').trim(),
       jobProfile:    jobProfileData,
       status:        'dialing',
@@ -372,10 +388,14 @@ app.get('/api/analytics', (req, res) => {
   const reloc  = withA.filter(c => String(c.structuredAnswers.open_to_relocation).toLowerCase() === 'yes').length;
   const industries = {};
   withA.forEach(c => { const k = (c.structuredAnswers.industry || 'Unknown').toString().trim() || 'Unknown'; industries[k] = (industries[k] || 0) + 1; });
+  const s2sCalls    = calls.filter(c => c.pipeline === 's2s').length;
+  const nonS2sCalls = calls.filter(c => c.pipeline === 'non-s2s').length;
   res.json({
     ok: true,
     analytics: {
       totalCalls: calls.length,
+      s2sCalls,
+      nonS2sCalls,
       withTranscript: withT.length,
       withAnswers: withA.length,
       avgExperience: avg(exp),
@@ -410,7 +430,23 @@ app.post('/event', async (req, res) => {
 
   const session = sessions.get(voiceId);
   if (!session) {
-    console.log('Webhook for unknown call:', voiceId, JSON.stringify(ev).slice(0, 120));
+    console.log('Webhook for unknown call:', voiceId || '(no voice_id)', JSON.stringify(ev).slice(0, 160));
+    // EnableX sometimes reports a setup FAILURE with no voice_id (e.g.
+    // {result:503,state:"failed"}). Attach it to the most recent still-dialing
+    // call so the UI shows "Ended/failed" instead of hanging on "Dialing".
+    const failed = ev.state === 'failed' || (typeof ev.result === 'number' && ev.result >= 400);
+    if (failed) {
+      const dialing = [...sessions.values()]
+        .filter(s => s.status === 'dialing')
+        .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0];
+      if (dialing) {
+        dialing.status = 'ended';
+        const why = ev.msg || ev.disconnect_reason || ev.reason || `service error ${ev.result || ''}`.trim();
+        callStore.upsertCall(dialing.id, { status: 'ended', endedAt: new Date().toISOString(), disconnectReason: String(why) });
+        log(dialing, 'error', `Call could not be connected — ${why}.`);
+        log(dialing, 'system', 'Call ended. Final state: failed');
+      }
+    }
     return;
   }
 
@@ -420,21 +456,37 @@ app.post('/event', async (req, res) => {
 
   try {
     // ── Call state transitions ─────────────────────────────────────────
-    if (ev.state === 'connected') {
-      session.status = 'in-progress';
-      log(session, 'system', 'Call answered — opening line playing.');
-      // Additive: begin recording if enabled (URL arrives later via webhook above).
-      if (process.env.ENABLE_RECORDING === 'true') {
-        enablex.startRecording(voiceId)
-          .then(() => log(session, 'system', 'Recording started.'))
-          .catch(e => console.error('[recording] start failed:', e.message));
+    // Candidate picked up → go Live. Different EnableX flows report this as
+    // connected / answered / inprogress, so accept any of them (once).
+    if (ev.state === 'connected' || ev.state === 'answered' ||
+        ev.state === 'inprogress' || ev.state === 'in-progress') {
+      if (session.status !== 'in-progress' && session.status !== 'completed' && session.status !== 'ended') {
+        session.status = 'in-progress';
+        callStore.upsertCall(voiceId, { status: 'in-progress', answeredAt: new Date().toISOString() });
+        log(session, 'system', 'Call answered — now live.');
+        // Additive: begin recording if enabled (URL arrives later via webhook above).
+        if (process.env.ENABLE_RECORDING === 'true') {
+          enablex.startRecording(voiceId, session.account)
+            .then(() => log(session, 'system', 'Recording started.'))
+            .catch(e => console.error('[recording] start failed:', e.message));
+        }
       }
       return;
     }
 
     if (ev.state === 'disconnected' || ev.state === 'callend' || ev.state === 'hangup') {
       if (session.status !== 'completed') session.status = 'ended';
-      log(session, 'system', `Call ended. Final state: ${session.state}`);
+      // Surface why the call ended (busy, no-answer, DND, route failure…).
+      const cause = ev.reason || ev.hangup_cause || ev.sip_reason || ev.sip_code ||
+                    ev.cause || ev.q850_cause || ev.disconnect_reason || '';
+      callStore.upsertCall(voiceId, {
+        status: session.status,
+        endedAt: new Date().toISOString(),
+        ...(cause ? { disconnectReason: String(cause) } : {}),
+      });
+      log(session, 'system', `Call ended. Final state: ${session.state}${cause ? ' — reason: ' + cause : ''}`);
+      if (cause) log(session, 'event', `Disconnect reason: ${cause}`);
+      console.log(`[${session.id}] DISCONNECT raw event:`, JSON.stringify(ev));
       return;
     }
 
@@ -443,7 +495,8 @@ app.post('/event', async (req, res) => {
     // Goodbye text finished playing → now safe to hang up
     if (ev.playstate === 'playfinished' && session.pendingHangup) {
       session.status = 'completed';
-      await enablex.hangup(voiceId).catch(() => {});
+      callStore.upsertCall(voiceId, { status: 'completed', endedAt: new Date().toISOString() });
+      await enablex.hangup(voiceId, session.account).catch(() => {});
       log(session, 'system', 'Call completed and hung up.');
       return;
     }
@@ -483,12 +536,13 @@ app.post('/event', async (req, res) => {
     if (result.hangup) {
       // Play farewell, then hang up on playfinished
       session.pendingHangup = true;
-      await enablex.playPrompt(voiceId, result.speak, { asr: false, promptRef: 'farewell' });
+      await enablex.playPrompt(voiceId, result.speak, { asr: false, promptRef: 'farewell', account: session.account });
     } else {
       await enablex.playPrompt(voiceId, result.speak, {
         asr:       true,
         promptRef: result.nextState,
         language:  session.language === 'hi' ? 'hi-IN' : undefined,
+        account:   session.account,
       });
     }
   } catch (e) {
@@ -504,6 +558,8 @@ app.listen(PORT, () => {
   const hasKey = Boolean(process.env.ENABLEX_APP_KEY);
   const hasFrom= Boolean(process.env.ENABLEX_FROM_NUMBER);
   const hook   = process.env.PUBLIC_WEBHOOK_URL;
+  const alt    = process.env.ENABLEX_FROM_NUMBER_ALT;
+  const altOk  = Boolean(process.env.ENABLEX_APP_ID_ALT && process.env.ENABLEX_APP_KEY_ALT);
 
   console.log(`\n  EvueMe Demo Calls  →  http://localhost:${PORT}`);
   console.log(`\n  Config:`);
@@ -511,5 +567,6 @@ app.listen(PORT, () => {
   console.log(`    ENABLEX_APP_KEY     : ${hasKey ? '✓ set' : '✗ NOT set'}`);
   console.log(`    ENABLEX_FROM_NUMBER : ${hasFrom? process.env.ENABLEX_FROM_NUMBER : '✗ NOT set'}`);
   console.log(`    PUBLIC_WEBHOOK_URL  : ${hook   ? hook + '/event' : '✗ not set (only opening line will play)'}`);
+  console.log(`    ALT dial number     : ${alt ? alt + (altOk ? ' (creds ✓)' : ' (⚠ ALT app id/key not set)') : '— not configured'}`);
   console.log();
 });
