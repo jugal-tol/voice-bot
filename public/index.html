@@ -134,6 +134,12 @@
     .call-row.active { border-color: #dc2626; background: #fef2f2; }
     .call-row .cr-name { font-size: 13px; font-weight: 700; color: #1e293b; }
     .call-row .cr-meta { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+    .pipe-badge {
+      display: inline-block; font-size: 9.5px; font-weight: 800; padding: 1px 6px;
+      border-radius: 6px; margin-left: 6px; letter-spacing: .04em; vertical-align: middle;
+    }
+    .pipe-badge.s2s     { background: #fee2e2; color: #b91c1c; }
+    .pipe-badge.non-s2s { background: #fef3c7; color: #b45309; }
     .detail-empty { color: #94a3b8; font-size: 13px; text-align: center; padding: 40px 10px; }
     .rec-link {
       display: inline-flex; align-items: center; gap: 6px; margin-top: 10px;
@@ -264,6 +270,15 @@
       outline: none; border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220, 38, 38, .12);
     }
     input::placeholder, textarea::placeholder { color: #94a3b8; }
+    .dial-select {
+      width: 100%; background: #ffffff; border: 1px solid #cbd5e1; color: #1e293b;
+      border-radius: 10px; padding: 11px 14px; font-size: 14px; font-family: inherit;
+      cursor: pointer; transition: border-color .15s, box-shadow .15s;
+    }
+    .dial-select:focus { outline: none; border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220, 38, 38, .12); }
+    .dial-note { margin-top: 6px; font-size: 12px; color: #64748b; min-height: 15px; }
+    .dial-note.custom { color: #b45309; font-weight: 600; }
+    html[data-theme="dark"] .dial-select { background: #0f172a; border-color: #334155; color: #e2e8f0; }
 
     /* ── Job Profile box + reset button ── */
     .textarea-wrap { position: relative; }
@@ -588,6 +603,13 @@
       </div>
     </div>
 
+    <!-- Dial Number (caller ID / pipeline selector) -->
+    <div class="field">
+      <label>Dial Number <span class="req">*</span> <span class="hint">(the number the call goes out from)</span></label>
+      <select id="dialNumber" class="dial-select"></select>
+      <div class="dial-note" id="dialNote"></div>
+    </div>
+
     <!-- Job Profile -->
     <div class="field">
       <label>Job Profile <span class="req">*</span> <span class="hint">(edit the values in this JSON)</span></label>
@@ -831,6 +853,26 @@
     $('jobProfile').value = DEFAULT_JOB_PROFILE;
   });
 
+  // ── Dial Number dropdown (caller ID + which pipeline runs) ─────────────
+  async function loadDialNumbers() {
+    const sel = $('dialNumber'); if (!sel) return;
+    try {
+      const d = await (await fetch('/api/config')).json();
+      const nums = (d && d.numbers) || [];
+      if (!nums.length) { sel.innerHTML = '<option value="">No dial number configured</option>'; return; }
+      sel.innerHTML = nums.map(n => `<option value="${esc(n.value)}" data-pipeline="${esc(n.pipeline)}">${esc(n.label)}</option>`).join('');
+      updateDialNote();
+    } catch (e) { sel.innerHTML = '<option value="">Could not load dial numbers</option>'; }
+  }
+  function updateDialNote() {
+    const sel = $('dialNumber'), note = $('dialNote'); if (!sel || !note) return;
+    const opt = sel.options[sel.selectedIndex];
+    note.className = 'dial-note';
+    note.textContent = opt ? ('The call will go out from ' + opt.value + '.') : '';
+  }
+  if ($('dialNumber')) $('dialNumber').addEventListener('change', updateDialNote);
+  loadDialNumbers();
+
   // System log lines that should NOT be shown in the call status box (UI only).
   // ── Dial ──────────────────────────────────────────────────────────────
   $('btnDial').addEventListener('click', async () => {
@@ -870,6 +912,7 @@
       number:        number,
       candidateName: name,
       jobProfile:    jobProfileRaw,
+      fromNumber:    ($('dialNumber') && $('dialNumber').value) || '',
     };
 
     try {
@@ -1019,20 +1062,28 @@
 
   // ── Polling ───────────────────────────────────────────────────────────
   function startPolling(callId) {
+    clearInterval(pollTimer);
+    let polls = 0;
+    const MAX_POLLS = 180;            // ~6 min safety net so the button never sticks
+    // Always frees the Dial button and stops polling — for any way a call finishes.
+    const finish = () => { clearInterval(pollTimer); $('btnDial').disabled = false; };
     pollTimer = setInterval(async () => {
+      polls++;
       try {
         const res = await fetch('/api/status/' + callId);
         const d   = await res.json();
-        if (!d.ok) return;
+        if (!d.ok) {                  // call id no longer tracked → treat as finished
+          setStatus('ended');
+          finish();
+          return;
+        }
         setStatus(d.status);
         appendLogs(d.log);
         renderAnswers(d.answers);
         if (d.outcome) renderOutcome(d.outcome);
-        if (d.status === 'completed' || d.status === 'ended') {
-          clearInterval(pollTimer);
-          $('btnDial').disabled = false;
-        }
-      } catch { /* keep polling */ }
+        if (d.status === 'completed' || d.status === 'ended') { finish(); return; }
+      } catch { /* transient — keep polling */ }
+      if (polls >= MAX_POLLS) finish();
     }, 2000);
   }
 
@@ -1071,7 +1122,7 @@
       calls.forEach(c => {
         const row = document.createElement('div');
         row.className = 'call-row';
-        row.innerHTML = `<div class="cr-name">${esc(c.candidateName || '(no name)')}</div><div class="cr-meta">${esc(c.to || c.callId)} · ${tagFn(c)}</div>`;
+        row.innerHTML = `<div class="cr-name">${esc(c.candidateName || '(no name)')}${pipeBadge(c)}</div><div class="cr-meta">${esc(c.to || c.callId)} · ${tagFn(c)}</div>`;
         row.addEventListener('click', () => {
           listEl.querySelectorAll('.call-row').forEach(r => r.classList.remove('active'));
           row.classList.add('active');
@@ -1194,6 +1245,8 @@
       const card = (n, l) => `<div class="stat"><div class="n">${n == null ? '—' : n}</div><div class="l">${l}</div></div>`;
       let html = '<div class="stat-grid">';
       html += card(a.totalCalls, 'Total calls');
+      html += card(a.s2sCalls, 'S2S calls');
+      html += card(a.nonS2sCalls, 'Non-S2S calls');
       html += card(a.withTranscript, 'With transcript');
       html += card(a.withAnswers, 'Answers extracted');
       html += card(a.avgFitScore, 'Avg fit score');
@@ -1233,7 +1286,7 @@
         const row = document.createElement('div');
         row.className = 'call-row';
         row.innerHTML =
-          `<div class="cr-name">${esc(c.candidateName || '(no name)')}</div>` +
+          `<div class="cr-name">${esc(c.candidateName || '(no name)')}${pipeBadge(c)}</div>` +
           `<div class="cr-meta">${esc(c.to || c.callId)} · ${c.transcriptComplete ? '📄 transcript' : '⏳ no transcript'} · ${fmtIST(c.createdAt)}</div>`;
         row.addEventListener('click', () => {
           document.querySelectorAll('.call-row').forEach(r => r.classList.remove('active'));
@@ -1255,7 +1308,7 @@
       const d = await res.json();
       if (!d.ok) { box.innerHTML = '<div class="detail-empty">Not found.</div>'; return; }
       const c = d.call;
-      let html = `<div class="brand"><div class="brand-name" style="font-size:18px;">${esc(c.candidateName || '(no name)')}</div></div>`;
+      let html = `<div class="brand"><div class="brand-name" style="font-size:18px;">${esc(c.candidateName || '(no name)')}${pipeBadge(c)}</div></div>`;
       html += `<div class="brand-sub">${esc(c.to || '')} &nbsp;·&nbsp; ${fmtIST(c.createdAt)}</div>`;
       if (c.recordingUrl) {
         html += `<a class="rec-link" href="${esc(c.recordingUrl)}" target="_blank" rel="noopener">🎙️ Recording / transcription link</a>`;
@@ -1296,7 +1349,7 @@
         const row = document.createElement('div');
         row.className = 'call-row';
         const tag = c.aiSummary ? '🤖 summarized' : (c.transcriptComplete ? '📄 transcript' : '⏳ no transcript');
-        row.innerHTML = `<div class="cr-name">${esc(c.candidateName || '(no name)')}</div><div class="cr-meta">${esc(c.to || c.callId)} · ${tag}</div>`;
+        row.innerHTML = `<div class="cr-name">${esc(c.candidateName || '(no name)')}${pipeBadge(c)}</div><div class="cr-meta">${esc(c.to || c.callId)} · ${tag}</div>`;
         row.addEventListener('click', () => {
           document.querySelectorAll('#summaryList .call-row').forEach(r => r.classList.remove('active'));
           row.classList.add('active');
@@ -1369,6 +1422,14 @@
   function esc(s) {
     return String(s)
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Small S2S / Non-S2S tag for a call (empty for older calls with no pipeline).
+  function pipeBadge(c) {
+    const p = c && c.pipeline;
+    if (p === 's2s')     return ' <span class="pipe-badge s2s">S2S</span>';
+    if (p === 'non-s2s') return ' <span class="pipe-badge non-s2s">Non-S2S</span>';
+    return '';
   }
 
   // Format a stored timestamp as "Wed, 16/07/2026, 14:55 (IST)" — Indian Standard
